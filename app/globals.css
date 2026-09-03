@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
+/* 1. Global CSS Variables for Dynamic Dark/Light Switching */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-app: #ffffff;
+  --text-main: #09090b;
+  --surface-card: #ffffff;
+  --border-muted: #e5e7eb;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --bg-app: #09090b;
+  --text-main: #ffffff;
+  --surface-card: #18181b;
+  --border-muted: #27272a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* 2. Extending Tailwind CSS Theme */
+@theme {
+  /* Brand Colors */
+  --color-brand-primary: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-light: #eff6ff;
+
+  /* Grey Palette */
+  --color-grey-light: #f3f4f6;
+  --color-grey-surface: #9ca3af;
+  --color-grey-dark: #374151;
+
+  /* Semantic UI Map */
+  --color-app-bg: var(--bg-app);
+  --color-app-text: var(--text-main);
+  --color-card-bg: var(--surface-card);
+  --color-card-border: var(--border-muted);
 }
 
+/* 3. Base Body Defaults */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
