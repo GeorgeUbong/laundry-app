@@ -13,12 +13,12 @@ const navigation = [
   },
   {
     name: "Customers",
-    href: "/customers",
+    href: "/customer",
     icon: "👥",
   },
   {
     name: "Categories",
-    href: "/categories",
+    href: "/category",
     icon: "▤",
   },
   {

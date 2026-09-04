@@ -6,7 +6,9 @@ import {
   getCustomers,
   Customer,
   addCustomer,
+  addOrder
 } from "@/apis/userRoutes";
+
 import { Button } from "@/_components/button";
 import { Modal } from "@/_components/modal";
 import Loading from "./loading";
@@ -18,7 +20,7 @@ type DashboardStats = {
   orders: number;
 };
 
-export default function Dashboard() {
+export default function CustomerPage() {
   const [stats, setStats] = useState<DashboardStats>({
     categories: 0,
     customers: 0,
@@ -82,7 +84,8 @@ export default function Dashboard() {
     loadDashboard();
   }, []);
 
-  const handleAddCustomer = async (event: React.FormEvent<HTMLFormElement>) => {
+  //add customer
+   const handleAddCustomer = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
@@ -109,44 +112,51 @@ export default function Dashboard() {
     }
   };
 
-  // Loading state
-  if (loading) {
-    return (
-    <main>
-      <Loading/>
-    </main>
-    );
-  }
 
-  // Error state
-  if (error) {
-    return (
-      <main className="min-h-screen bg-black p-6 text-white">
-        <p className="text-red-500">{error}</p>
+
+  // Loading state
+    if (loading) {
+      return (
+      <main>
+        <Loading/>
       </main>
-    );
-  }
+      );
+    }
+  
+    // Error state
+    if (error) {
+      return (
+        <main className="min-h-screen bg-black p-6 text-white">
+          <p className="text-red-500">{error}</p>
+        </main>
+      );
+    }
 
   return (
-    <main className="min-h-screen bg-black p-6 text-white">
-      {/* Header */}
-      <h1 className="mb-2 text-3xl font-bold">
-        Dashboard
+    <main className="min-w-0 p-4 sm:p-6 lg:p-8">
+         {/* Header */}
+      <h1 className="mb-2 text-2xl font-bold sm:text-3xl">
+        Customers
       </h1>
 
-      <h3 className="mb-6 text-xl text-gray-300">
-        Hello laundro como👋
+      <h3 className="mb-6 text-base text-gray-300 sm:text-xl">
+        View customers and create laundry orders
       </h3>
      {/* ================= BUTTON ================= */}
-      <Button className="mb-6" onClick={() => setIsModalOpen(true)}>
-        Add customer
-      </Button>
+      <div className="mb-6 flex flex-wrap gap-3">
+        <Button onClick={() => setIsModalOpen(true)}>
+          Add customer
+        </Button>
 
-      {/* ================= STATS ================= */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Button>
+          Create Order
+        </Button>
+      </div>
 
+         {/* ================= STATS ================= */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"> 
         {/* Customers */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
+        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sm:p-6">
           <p className="text-sm text-gray-400">
             Customers
           </p>
@@ -157,45 +167,26 @@ export default function Dashboard() {
         </div>
 
         {/* Orders */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
+        <div className="rounded-xl border border-gray-800 bg-gray-900 p-4 sm:p-6">
           <p className="text-sm text-gray-400">
             Orders
-          </p>
 
-          <h2 className="mt-2 text-3xl font-bold">
+             <h2 className="mt-2 text-3xl font-bold">
             {stats.orders}
           </h2>
-        </div>
-
-        {/* Categories */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-          <p className="text-sm text-gray-400">
-            Categories
           </p>
+          </div>
 
-          <h2 className="mt-2 text-3xl font-bold">
-            {stats.categories}
-          </h2>
         </div>
+          
 
-        {/* Income */}
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
-          <p className="text-sm text-gray-400">
-            Income
-          </p>
-
-          <h2 className="mt-2 text-3xl font-bold">
-            ₦{stats.income.toLocaleString()}
-          </h2>
-        </div>
-      </div>
-
-      {/* ================= CUSTOMERS TABLE ================= */}
-      <div className="mt-8 rounded-xl border border-gray-800 bg-gray-900">
+        
+        {/* ================= CUSTOMERS TABLE ================= */}
+      <div className="mt-8 min-w-0 rounded-xl border border-gray-800 bg-gray-900">
 
         {/* Table Header */}
-        <div className="border-b border-gray-800 p-6">
-          <h2 className="text-xl font-semibold">
+        <div className="border-b border-gray-800 p-4 sm:p-6">
+          <h2 className="text-lg font-semibold sm:text-xl">
             Customers
           </h2>
 
@@ -206,7 +197,7 @@ export default function Dashboard() {
 
         {/* Responsive table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[40rem] w-full text-left text-sm">
 
             <thead className="border-b border-gray-800 text-gray-400">
               <tr>
@@ -278,7 +269,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+
+      {/** Modal FOR ADD CUSTOMER*/}
+       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <form onSubmit={handleAddCustomer} className="space-y-4">
           <div>
             <h2 className="text-xl font-semibold">Add customer</h2>
@@ -333,6 +326,8 @@ export default function Dashboard() {
           </div>
         </form>
       </Modal>
+
+      {/**MODAL ADD ORDER */}
     </main>
-  );
+  )
 }
