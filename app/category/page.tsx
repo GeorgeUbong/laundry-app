@@ -65,7 +65,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="page-enter p-8">
 
       {/* Header */}
       <div className="mb-8">
@@ -79,7 +79,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-950">
+      <div className="table-enter overflow-hidden rounded-xl border border-gray-800 bg-gray-950">
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">

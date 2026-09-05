@@ -95,7 +95,10 @@ export default function Dashboard() {
       const data = await addCustomer(formData, token);
 
       if (data.customer) {
-        setCustomers((currentCustomers) => [data.customer!, ...currentCustomers]);
+        setCustomers((currentCustomers) => [
+          { ...data.customer!, order: data.customer!.order ?? [] },
+          ...currentCustomers,
+        ]);
         setStats((currentStats) => ({
           ...currentStats,
           customers: currentStats.customers + 1,
@@ -128,7 +131,7 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-black p-6 text-white">
+    <main className="page-enter min-h-screen bg-black p-6 text-white">
       {/* Header */}
       <h1 className="mb-2 text-3xl font-bold">
         Dashboard
@@ -143,7 +146,7 @@ export default function Dashboard() {
       </Button>
 
       {/* ================= STATS ================= */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
         {/* Customers */}
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-6">
@@ -191,7 +194,7 @@ export default function Dashboard() {
       </div>
 
       {/* ================= CUSTOMERS TABLE ================= */}
-      <div className="mt-8 rounded-xl border border-gray-800 bg-gray-900">
+      <div className="table-enter mt-8 rounded-xl border border-gray-800 bg-gray-900">
 
         {/* Table Header */}
         <div className="border-b border-gray-800 p-6">

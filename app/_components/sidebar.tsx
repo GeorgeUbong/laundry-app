@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { toast } from "react-toastify";
 
 const navigation = [
   {
@@ -44,7 +45,8 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    toast.success("Logged out successfully!");
+    window.location.href = "/";
   };
 
   if (!mounted) return null;
