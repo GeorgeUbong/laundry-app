@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MoreVertical, ArrowRight } from "lucide-react";
+import { MoreVertical, ArrowRight, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   getStats,
@@ -67,13 +67,14 @@ export default function CustomerPage() {
   const [balanceAmount, setBalanceAmount] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<CustomerType["order"][number] | null>(null);
   const [orderActionLoading, setOrderActionLoading] = useState(false);
-  const [orderStatus, setOrderStatus] = useState("ready");
+  const [orderStatus, setOrderStatus] = useState("completed");
   const [pendingOrderAction, setPendingOrderAction] = useState<"status" | "delete" | null>(null);
   const [deleteCustomerPrompt, setDeleteCustomerPrompt] = useState(false);
   const [editCustomerForm, setEditCustomerForm] = useState({
     username: "",
     phonenumber: "",
   });
+  const [refreshingCustomer, setRefreshingCustomer] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -110,6 +111,25 @@ export default function CustomerPage() {
   const refreshPage = async (message?: string) => {
     if (message) toast.success(message);
     await loadPageData(false);
+  };
+
+  // ✅ NEW: Refresh customer data in sidebar
+  const refreshCustomerData = async () => {
+    if (!selectedCustomer) return;
+    try {
+      setRefreshingCustomer(true);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Your session has expired");
+      
+      const data = await getCustomer(selectedCustomer.id, token);
+      setSelectedCustomer(data.customer);
+      toast.success("Customer updated");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to refresh customer";
+      toast.error(message);
+    } finally {
+      setRefreshingCustomer(false);
+    }
   };
 
   const openCustomerOrder = () => {
@@ -399,13 +419,23 @@ export default function CustomerPage() {
       setOrderActionLoading(true);
       const customerId = selectedCustomer.id;
 
-      if (orderStatus === "ready") {
+      // ✅ Changed: orderStatus is now "completed" instead of "ready"
+      if (orderStatus === "completed") {
         const completion = await completeOrder(selectedOrder.id, token);
 
-        // The completion response contains the authoritative post-debit customer.
+        // ✅ FIXED: Update order status AND customer balance
         setSelectedCustomer((currentCustomer) =>
           currentCustomer && currentCustomer.id === customerId
-            ? { ...currentCustomer, ...completion.updatedCustomer }
+            ? {
+                ...currentCustomer,
+                ...completion.updatedCustomer,
+                // ✅ Update the order with new status from API
+                order: currentCustomer.order.map((order) =>
+                  order.id === selectedOrder.id
+                    ? { ...order, ...completion.updatedOrder }
+                    : order
+                ),
+              }
             : currentCustomer
         );
       } else {
@@ -422,7 +452,7 @@ export default function CustomerPage() {
 
       setSelectedOrder(null);
       setPendingOrderAction(null);
-      await refreshPage(orderStatus === "ready" ? "Order is ready. Alert admin to reverse transactions." : "Order status updated");
+      await refreshPage(orderStatus === "completed" ? "Order completed successfully" : "Order status updated");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update order";
       toast.error(message);
@@ -462,6 +492,17 @@ export default function CustomerPage() {
     } else if (pendingOrderAction === "delete" && selectedOrder) {
       await handleDeleteOrder(selectedOrder.id);
     }
+  };
+
+  // ✅ NEW: Split orders into active and history
+  const getOrdersByStatus = (customer: CustomerType) => {
+    const active = customer.order.filter(
+      (order) => order.status.toLowerCase() !== "completed"
+    );
+    const history = customer.order.filter(
+      (order) => order.status.toLowerCase() === "completed"
+    );
+    return { active, history };
   };
 
 
@@ -887,8 +928,9 @@ export default function CustomerPage() {
               </h2>
               <p className="mt-1 text-sm text-grey-surface">
                 Current status:{" "}
+                {/* ✅ FIXED: Changed color logic for completed status */}
                 <span className={`rounded-full px-2 py-1 ${
-                  selectedOrder.status.toLowerCase() === "ready"
+                  selectedOrder.status.toLowerCase() === "completed" || selectedOrder.status.toLowerCase() === "ready"
                     ? "bg-green-500/15 text-green-400"
                     : "bg-orange-500/15 text-orange-400"
                 }`}>
@@ -907,8 +949,9 @@ export default function CustomerPage() {
                 }}
                 className="mt-2 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none focus:border-brand-primary"
               >
-                <option value="Ready">Ready</option>
-                <option value="Pending">Pending</option>
+                {/* ✅ Changed: "Ready" to "Completed" */}
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
               </select>
             </label>
 
@@ -966,14 +1009,27 @@ export default function CustomerPage() {
                   {selectedCustomer.username}
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedCustomer(null)}
-                className="rounded-lg px-3 py-2 text-gray-400 hover:bg-gray-800 hover:text-white"
-                aria-label="Close customer details"
-              >
-                X
-              </button>
+              <div className="flex gap-2">
+                {/* ✅ NEW: Refresh button */}
+                <button
+                  type="button"
+                  onClick={refreshCustomerData}
+                  disabled={refreshingCustomer}
+                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-50 transition"
+                  aria-label="Refresh customer data"
+                  title="Refresh"
+                >
+                  <RefreshCw className={`h-5 w-5 ${refreshingCustomer ? "animate-spin" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomer(null)}
+                  className="rounded-lg px-3 py-2 text-gray-400 hover:bg-gray-800 hover:text-white"
+                  aria-label="Close customer details"
+                >
+                  X
+                </button>
+              </div>
             </div>
 
             {customerLoading ? (
@@ -1070,66 +1126,130 @@ export default function CustomerPage() {
                       </Button>
                     </div>
 
-                    <div className="mt-8">
-                      <h3 className="text-lg font-semibold">Orders</h3>
-                      <div className="mt-3 space-y-3">
-                        {selectedCustomer.order.length > 0 ? (
-                          selectedCustomer.order.map((order) => (
-                            <div
-                              key={order.id}
-                              className="rounded-xl border border-gray-800 bg-gray-900 p-4"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <p className="font-semibold">Order #{order.id}</p>
-                                  <p className="mt-1 text-sm text-gray-400">
-                                    <span className={`rounded-full px-2 py-1 ${
-                                      order.status.toLowerCase() === "ready"
-                                        ? "bg-green-500/15 text-green-400"
-                                        : "bg-orange-500/15 text-orange-400"
-                                    }`}>
-                                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                    </span>
-                                    <span className="ml-2">
-                                      · {new Date(order.createdAt).toLocaleDateString()}
-                                    </span>
-                                  </p>
+                    {/* ✅ NEW: Split into Active Orders and History */}
+                    <div className="mt-8 space-y-8">
+                      {/* Active Orders */}
+                      <div>
+                        <h3 className="text-lg font-semibold">Active Orders</h3>
+                        <div className="mt-3 space-y-3">
+                          {getOrdersByStatus(selectedCustomer).active.length > 0 ? (
+                            getOrdersByStatus(selectedCustomer).active.map((order) => (
+                              <div
+                                key={order.id}
+                                className="rounded-xl border border-gray-800 bg-gray-900 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold">Order #{order.id}</p>
+                                    <p className="mt-1 text-sm text-gray-400">
+                                      <span className={`rounded-full px-2 py-1 ${
+                                        order.status.toLowerCase() === "ready"
+                                          ? "bg-green-500/15 text-green-400"
+                                          : "bg-orange-500/15 text-orange-400"
+                                      }`}>
+                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                      </span>
+                                      <span className="ml-2">
+                                        · {new Date(order.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedOrder(order);
+                                      setOrderStatus(order.status === "Completed" ? "completed" : "pending");
+                                      setPendingOrderAction(null);
+                                    }}
+                                    className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white"
+                                    aria-label={`Open actions for order ${order.id}`}
+                                  >
+                                    <MoreVertical className="h-5 w-5" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedOrder(order);
-                                    setOrderStatus(order.status === "Ready" ? "Ready" : "Pending");
-                                    setPendingOrderAction(null);
-                                  }}
-                                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white"
-                                  aria-label={`Open actions for order ${order.id}`}
-                                >
-                                  <MoreVertical className="h-5 w-5" />
-                                </button>
+                                <div className="mt-3 space-y-1 text-sm text-gray-300">
+                                  {(order.items ?? []).map((orderItem) => (
+                                    <p key={orderItem.id}>
+                                      {orderItem.item.name} x {orderItem.quantity}
+                                    </p>
+                                  ))}
+                                </div>
+                                <p className="mt-3 font-semibold text-green-400">
+                                  ₦{(
+                                    order.totalAmount ??
+                                    (order.items ?? []).reduce(
+                                      (total, orderItem) =>
+                                        total + orderItem.price * orderItem.quantity,
+                                      0
+                                    )
+                                  ).toLocaleString()}
+                                </p>
                               </div>
-                              <div className="mt-3 space-y-1 text-sm text-gray-300">
-                                {(order.items ?? []).map((orderItem) => (  // ✅ Fallback to empty array
-                                  <p key={orderItem.id}>
-                                    {orderItem.item.name} x {orderItem.quantity}
-                                  </p>
-                                ))}
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-400">No active orders.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* History */}
+                      <div>
+                        <h3 className="text-lg font-semibold">History</h3>
+                        <div className="mt-3 space-y-3">
+                          {getOrdersByStatus(selectedCustomer).history.length > 0 ? (
+                            getOrdersByStatus(selectedCustomer).history.map((order) => (
+                              <div
+                                key={order.id}
+                                className="rounded-xl border border-gray-800 bg-gray-900 p-4 opacity-75"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold">Order #{order.id}</p>
+                                    <p className="mt-1 text-sm text-gray-400">
+                                      <span className="rounded-full bg-green-500/15 px-2 py-1 text-green-400">
+                                        Completed
+                                      </span>
+                                      <span className="ml-2">
+                                        · {new Date(order.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedOrder(order);
+                                      setOrderStatus("completed");
+                                      setPendingOrderAction(null);
+                                    }}
+                                    className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white"
+                                    aria-label={`Open actions for order ${order.id}`}
+                                  >
+                                    <MoreVertical className="h-5 w-5" />
+                                  </button>
+                                </div>
+                                <div className="mt-3 space-y-1 text-sm text-gray-300">
+                                  {(order.items ?? []).map((orderItem) => (
+                                    <p key={orderItem.id}>
+                                      {orderItem.item.name} x {orderItem.quantity}
+                                    </p>
+                                  ))}
+                                </div>
+                                <p className="mt-3 font-semibold text-green-400">
+                                  ₦{(
+                                    order.totalAmount ??
+                                    (order.items ?? []).reduce(
+                                      (total, orderItem) =>
+                                        total + orderItem.price * orderItem.quantity,
+                                      0
+                                    )
+                                  ).toLocaleString()}
+                                </p>
                               </div>
-                              <p className="mt-3 font-semibold text-green-400">
-                                ₦{(
-                                  order.totalAmount ??
-                                  (order.items ?? []).reduce(  // ✅ Fallback to empty array
-                                    (total, orderItem) =>
-                                      total + orderItem.price * orderItem.quantity,
-                                    0
-                                  )
-                                ).toLocaleString()}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-400">No orders found.</p>
-                        )}
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-400">No completed orders.</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </>

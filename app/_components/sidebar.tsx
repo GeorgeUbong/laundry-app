@@ -3,29 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, ShoppingBag, SquareStack, Summary, UsersRound, X,   } from "lucide-react";
 import { toast } from "react-toastify";
+import { UserRound } from "lucide-react";
 
 const navigation = [
   {
     name: "Overview",
     href: "/dashboard",
-    icon: "▦",
+    icon: <Summary/>,
   },
   {
     name: "Customers",
     href: "/customer",
-    icon: "👥",
+    icon: <UsersRound/>,
   },
   {
     name: "Categories",
     href: "/category",
-    icon: "▤",
+    icon: <SquareStack/>,
   },
   {
     name: "Orders",
     href: "/orders",
-    icon: "🛍",
+    icon: <ShoppingBag/>,
   },
 ];
 
@@ -94,9 +95,9 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6">
-          <p className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          {/**<p className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             Menu
-          </p>
+          </p> */}
 
           <div className="space-y-2">
             {navigation.map((item) => {
