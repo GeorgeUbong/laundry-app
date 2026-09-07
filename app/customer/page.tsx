@@ -32,7 +32,14 @@ type DashboardStats = {
   orders: number;
 };
 
-type OrderFilter = "all" | "pending" | "ready";
+type OrderFilter = "all" | "pending" | "completed";
+
+const getOrderStatus = (status: string | null | undefined) =>
+  String(status ?? "pending").trim().toLowerCase();
+
+const isAlreadyCompletedError = (message: string) =>
+  message.toLowerCase().includes("already") &&
+  message.toLowerCase().includes("completed");
 
 export default function CustomerPage() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -96,8 +103,15 @@ export default function CustomerPage() {
         getCategories(token),
       ]);
 
+      const customersWithOrders = await Promise.all(
+        customersData.getCustomer.map(async (customer) => {
+          const customerDetails = await getCustomer(customer.id, token);
+          return customerDetails.customer;
+        })
+      );
+
       setStats(statsData.dashboardData);
-      setCustomers(customersData.getCustomer);
+      setCustomers(customersWithOrders);
       setCategories(categoriesData.categories);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load customers";
@@ -212,8 +226,8 @@ export default function CustomerPage() {
   const visibleCustomers = customers.filter((customer) =>
     orderFilter === "all"
       ? true
-      : customer.order.some(
-          (order) => order.status.toLowerCase() === orderFilter
+      : (customer.order ?? []).some(
+          (order) => getOrderStatus(order.status) === orderFilter
         )
   );
 
@@ -240,7 +254,7 @@ export default function CustomerPage() {
       setCustomers((currentCustomers) =>
         currentCustomers.map((customer) =>
           customer.id === data.order.customerId
-            ? { ...customer, order: [data.order, ...customer.order] }
+            ? { ...customer, order: [data.order, ...(customer.order ?? [])] }
             : customer
         )
       );
@@ -356,7 +370,7 @@ export default function CustomerPage() {
         currentCustomer
           ? {
               ...currentCustomer,
-              order: currentCustomer.order.filter((order) => order.id !== orderId),
+              order: (currentCustomer.order ?? []).filter((order) => order.id !== orderId),
             }
           : currentCustomer
       );
@@ -365,7 +379,7 @@ export default function CustomerPage() {
           customer.id === selectedCustomer.id
             ? {
                 ...customer,
-                order: customer.order.filter((order) => order.id !== orderId),
+                order: (customer.order ?? []).filter((order) => order.id !== orderId),
               }
             : customer
         )
@@ -389,7 +403,7 @@ export default function CustomerPage() {
       currentCustomer
         ? {
             ...currentCustomer,
-            order: currentCustomer.order.map((order) =>
+            order: (currentCustomer.order ?? []).map((order) =>
               order.id === updatedOrder.id ? updatedOrder : order
             ),
           }
@@ -400,7 +414,7 @@ export default function CustomerPage() {
         customer.id === selectedCustomer?.id
           ? {
               ...customer,
-              order: customer.order.map((order) =>
+              order: (customer.order ?? []).map((order) =>
                 order.id === updatedOrder.id ? updatedOrder : order
               ),
             }
@@ -419,7 +433,6 @@ export default function CustomerPage() {
       setOrderActionLoading(true);
       const customerId = selectedCustomer.id;
 
-      // ✅ Changed: orderStatus is now "completed" instead of "ready"
       if (orderStatus === "completed") {
         const completion = await completeOrder(selectedOrder.id, token);
 
@@ -430,7 +443,7 @@ export default function CustomerPage() {
                 ...currentCustomer,
                 ...completion.updatedCustomer,
                 // ✅ Update the order with new status from API
-                order: currentCustomer.order.map((order) =>
+                order: (currentCustomer.order ?? []).map((order) =>
                   order.id === selectedOrder.id
                     ? { ...order, ...completion.updatedOrder }
                     : order
@@ -456,7 +469,13 @@ export default function CustomerPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update order";
       toast.error(message);
-      setError(message);
+      if (isAlreadyCompletedError(message)) {
+        setSelectedOrder(null);
+        setPendingOrderAction(null);
+        await loadPageData(false);
+      } else {
+        setError(message);
+      }
     } finally {
       setOrderActionLoading(false);
     }
@@ -496,11 +515,10 @@ export default function CustomerPage() {
 
   // ✅ NEW: Split orders into active and history
   const getOrdersByStatus = (customer: CustomerType) => {
-    const active = customer.order.filter(
-      (order) => order.status.toLowerCase() !== "completed"
-    );
-    const history = customer.order.filter(
-      (order) => order.status.toLowerCase() === "completed"
+    const orders = customer.order ?? [];
+    const active = orders.filter((order) => getOrderStatus(order.status) !== "completed");
+    const history = orders.filter(
+      (order) => getOrderStatus(order.status) === "completed"
     );
     return { active, history };
   };
@@ -584,7 +602,7 @@ export default function CustomerPage() {
         
         {/* ===== FILTERS SECTION (MOVED ABOVE TABLE) ===== */}
         <div className="mb-4 flex flex-wrap gap-2">
-          {(["all", "pending", "ready"] as OrderFilter[]).map((filter) => (
+          {(["all", "pending", "completed"] as OrderFilter[]).map((filter) => (
             <button
               key={filter}
               type="button"
@@ -670,7 +688,7 @@ export default function CustomerPage() {
                       </td>
  
                       <td className="px-6 py-4 text-gray-300">
-                        {customer.order.length}
+                        {Number((customer.order ?? []).length)}
                       </td>
 
                       {/* ===== ACTIONS COLUMN ===== */}
@@ -928,9 +946,8 @@ export default function CustomerPage() {
               </h2>
               <p className="mt-1 text-sm text-grey-surface">
                 Current status:{" "}
-                {/* ✅ FIXED: Changed color logic for completed status */}
                 <span className={`rounded-full px-2 py-1 ${
-                  selectedOrder.status.toLowerCase() === "completed" || selectedOrder.status.toLowerCase() === "ready"
+                  getOrderStatus(selectedOrder.status) === "completed"
                     ? "bg-green-500/15 text-green-400"
                     : "bg-orange-500/15 text-orange-400"
                 }`}>
@@ -949,7 +966,6 @@ export default function CustomerPage() {
                 }}
                 className="mt-2 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none focus:border-brand-primary"
               >
-                {/* ✅ Changed: "Ready" to "Completed" */}
                 <option value="completed">Completed</option>
                 <option value="pending">Pending</option>
               </select>
@@ -1143,11 +1159,11 @@ export default function CustomerPage() {
                                     <p className="font-semibold">Order #{order.id}</p>
                                     <p className="mt-1 text-sm text-gray-400">
                                       <span className={`rounded-full px-2 py-1 ${
-                                        order.status.toLowerCase() === "ready"
+                                        getOrderStatus(order.status) === "completed"
                                           ? "bg-green-500/15 text-green-400"
                                           : "bg-orange-500/15 text-orange-400"
                                       }`}>
-                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                        {getOrderStatus(order.status)}
                                       </span>
                                       <span className="ml-2">
                                         · {new Date(order.createdAt).toLocaleDateString()}
@@ -1158,7 +1174,7 @@ export default function CustomerPage() {
                                     type="button"
                                     onClick={() => {
                                       setSelectedOrder(order);
-                                      setOrderStatus(order.status === "Completed" ? "completed" : "pending");
+                                      setOrderStatus(getOrderStatus(order.status));
                                       setPendingOrderAction(null);
                                     }}
                                     className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white"

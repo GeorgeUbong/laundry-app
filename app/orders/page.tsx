@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { MoreVertical } from "lucide-react";
 import { toast } from "react-toastify";
+
 import {
   getStats,
   Order,
@@ -15,6 +16,7 @@ import {
   deleteOrder,
   updateOrderStatus,
 } from "@/apis/userRoutes";
+
 import { Button } from "@/_components/button";
 import { Card } from "@/_components/card";
 import { Modal } from "@/_components/modal";
@@ -27,7 +29,14 @@ type DashboardStats = {
   orders: number;
 };
 
-type OrderFilter = "all" | "pending" | "ready";
+type OrderFilter = "all" | "pending" | "completed";
+
+const getOrderStatus = (status: string | null | undefined) =>
+  String(status ?? "pending").trim().toLowerCase();
+
+const isAlreadyCompletedError = (message: string) =>
+  message.toLowerCase().includes("already") &&
+  message.toLowerCase().includes("completed");
 
 export default function OrdersPage() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -40,116 +49,300 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+
   const [customerSearch, setCustomerSearch] = useState("");
+
   const [orderForm, setOrderForm] = useState({
     customerId: "",
     itemId: "",
     quantity: 1,
   });
+
   const [orderSubmitting, setOrderSubmitting] = useState(false);
+
   const [error, setError] = useState("");
+
   const [loading, setLoading] = useState(true);
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orderStatus, setOrderStatus] = useState("ready");
-  const [pendingOrderAction, setPendingOrderAction] = useState<"status" | "delete" | null>(null);
+
+  const [orderStatus, setOrderStatus] = useState("completed");
+
+  const [pendingOrderAction, setPendingOrderAction] = useState<
+    "status" | "delete" | null
+  >(null);
+
   const [orderActionLoading, setOrderActionLoading] = useState(false);
+
+  // =========================================================
+  // LOAD PAGE DATA
+  // =========================================================
 
   const loadPageData = useCallback(async (showLoading = true) => {
     try {
-      if (showLoading) setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
+
       setError("");
 
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Your session has expired");
 
-      const [statsData, ordersData, customersData, categoriesData] = await Promise.all([
+      if (!token) {
+        throw new Error("Your session has expired");
+      }
+
+      const [
+        statsData,
+        ordersData,
+        customersData,
+        categoriesData,
+      ] = await Promise.all([
         getStats(token),
         getRecentOrders(token),
         getCustomers(token),
         getCategories(token),
       ]);
 
-      setStats(statsData.dashboardData);
-      setOrders(ordersData.orders);
-      setCustomers(customersData.getCustomer);
-      setCategories(categoriesData.categories);
+      // =====================================================
+      // FIX STATS RESPONSE
+      // =====================================================
+
+      console.log("Stats API response:", statsData);
+
+      const rawStats =
+        (statsData as any)?.dashboardData ??
+        (statsData as any)?.data ??
+        statsData;
+
+      const dashboardStats: DashboardStats = {
+        customers: Number(
+          rawStats?.customers ??
+            rawStats?.customerCount ??
+            rawStats?.totalCustomers ??
+            0
+        ),
+
+        orders: Number(
+          rawStats?.orders ??
+            rawStats?.orderCount ??
+            rawStats?.totalOrders ??
+            0
+        ),
+
+        categories: Number(
+          rawStats?.categories ??
+            rawStats?.categoryCount ??
+            rawStats?.totalCategories ??
+            0
+        ),
+
+        income: Number(
+          rawStats?.income ??
+            rawStats?.totalIncome ??
+            rawStats?.revenue ??
+            0
+        ),
+      };
+
+      console.log("Processed dashboard stats:", dashboardStats);
+
+      setStats(dashboardStats);
+
+      // =====================================================
+      // ORDERS
+      // =====================================================
+
+      setOrders(ordersData?.orders ?? []);
+
+      // =====================================================
+      // CUSTOMERS
+      // =====================================================
+
+      setCustomers(customersData?.getCustomer ?? []);
+
+      // =====================================================
+      // CATEGORIES
+      // =====================================================
+
+      setCategories(categoriesData?.categories ?? []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load orders";
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to load dashboard data";
+
+      console.error("Dashboard loading error:", err);
+
       toast.error(message);
       setError(message);
     } finally {
-      if (showLoading) setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, []);
 
+  // =========================================================
+  // REFRESH
+  // =========================================================
+
   const refreshPage = async (message?: string) => {
-    if (message) toast.success(message);
+    if (message) {
+      toast.success(message);
+    }
+
     await loadPageData(false);
   };
+
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadPageData();
     }, 0);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [loadPageData]);
 
+  // =========================================================
+  // CUSTOMER SEARCH
+  // =========================================================
+
   const filteredCustomers = customers.filter((customer) => {
-    const search = customerSearch.toLowerCase();
+    const search = customerSearch.toLowerCase().trim();
+
     return (
-      customer.username.toLowerCase().includes(search) ||
-      customer.phonenumber.toLowerCase().includes(search)
+      customer.username?.toLowerCase().includes(search) ||
+      customer.phonenumber?.toLowerCase().includes(search)
     );
   });
 
+  // =========================================================
+  // CATEGORY ITEMS
+  // =========================================================
+
   const categoryItems = categories.flatMap((category) =>
-    category.items.map((item) => ({ ...item, categoryName: category.name }))
+    (category.items ?? []).map((item) => ({
+      ...item,
+      categoryName: category.name,
+    }))
   );
+
+  // =========================================================
+  // SELECTED CUSTOMER
+  // =========================================================
+
   const selectedOrderCustomer = customers.find(
     (customer) => customer.id === Number(orderForm.customerId)
   );
+
+  // =========================================================
+  // SELECTED ITEM
+  // =========================================================
+
   const selectedOrderItem = categoryItems.find(
     (item) => item.id === Number(orderForm.itemId)
   );
+
+  // =========================================================
+  // ORDER TOTAL
+  // =========================================================
+
   const orderTotal = selectedOrderItem
-    ? selectedOrderItem.price * orderForm.quantity
+    ? Number(selectedOrderItem.price) * orderForm.quantity
     : 0;
+
+  // =========================================================
+  // BALANCE CHECK
+  // =========================================================
+
   const hasInsufficientBalance = Boolean(
-    selectedOrderCustomer && orderTotal > selectedOrderCustomer.balance
-  );
-  const visibleOrders = orders.filter((order) =>
-    orderFilter === "all" ? true : order.status.toLowerCase() === orderFilter
+    selectedOrderCustomer &&
+      orderTotal > Number(selectedOrderCustomer.balance)
   );
 
-  const handleCreateOrder = async (event: FormEvent<HTMLFormElement>) => {
+  // =========================================================
+  // FILTERED ORDERS
+  // =========================================================
+
+  const visibleOrders = orders.filter((order) =>
+    orderFilter === "all"
+      ? true
+      : getOrderStatus(order.status) === orderFilter
+  );
+
+  // =========================================================
+  // CREATE ORDER
+  // =========================================================
+
+  const handleCreateOrder = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Your session has expired");
+
+      if (!token) {
+        throw new Error("Your session has expired");
+      }
+
+      if (!orderForm.customerId) {
+        toast.error("Please select a customer");
+        return;
+      }
+
+      if (!orderForm.itemId) {
+        toast.error("Please select an item");
+        return;
+      }
+
       if (hasInsufficientBalance) {
         toast.error("Order total exceeds the customer balance");
         return;
       }
 
       setOrderSubmitting(true);
+
       await addOrder(
         {
           customerId: Number(orderForm.customerId),
-          items: [{ itemId: Number(orderForm.itemId), quantity: orderForm.quantity }],
+          items: [
+            {
+              itemId: Number(orderForm.itemId),
+              quantity: orderForm.quantity,
+            },
+          ],
         },
         token
       );
 
-      setOrderForm({ customerId: "", itemId: "", quantity: 1 });
+      setOrderForm({
+        customerId: "",
+        itemId: "",
+        quantity: 1,
+      });
+
       setCustomerSearch("");
+
       setIsOrderModalOpen(false);
+
       await refreshPage("Order created");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create order";
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to create order";
+
       toast.error(message);
       setError(message);
     } finally {
@@ -157,20 +350,36 @@ export default function OrdersPage() {
     }
   };
 
+  // =========================================================
+  // DELETE ORDER
+  // =========================================================
+
   const handleDeleteSelectedOrder = async () => {
-    if (!selectedOrder) return;
+    if (!selectedOrder) {
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Your session has expired");
+
+      if (!token) {
+        throw new Error("Your session has expired");
+      }
 
       setOrderActionLoading(true);
+
       await deleteOrder(selectedOrder.id, token);
+
       setSelectedOrder(null);
       setPendingOrderAction(null);
+
       await refreshPage("Order deleted");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete order";
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to delete order";
+
       toast.error(message);
       setError(message);
     } finally {
@@ -178,36 +387,73 @@ export default function OrdersPage() {
     }
   };
 
+  // =========================================================
+  // UPDATE ORDER STATUS
+  // =========================================================
+
   const handleUpdateSelectedOrder = async () => {
-    if (!selectedOrder) return;
+    if (!selectedOrder) {
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Your session has expired");
+
+      if (!token) {
+        throw new Error("Your session has expired");
+      }
 
       setOrderActionLoading(true);
-      await updateOrderStatus(selectedOrder.id, { status: orderStatus }, token);
+
+      await updateOrderStatus(
+        selectedOrder.id,
+        {
+          status: orderStatus,
+        },
+        token
+      );
+
       setSelectedOrder(null);
       setPendingOrderAction(null);
-      await refreshPage("Alert admin to reverse transactions");
+
+      await refreshPage("Order status updated");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update order";
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to update order";
+
       toast.error(message);
-      setError(message);
+      if (isAlreadyCompletedError(message)) {
+        setSelectedOrder(null);
+        setPendingOrderAction(null);
+        await loadPageData(false);
+      } else {
+        setError(message);
+      }
     } finally {
       setOrderActionLoading(false);
     }
   };
+
+  // =========================================================
+  // CONFIRM ORDER ACTION
+  // =========================================================
 
   const handleOrderActionConfirmation = async () => {
     if (pendingOrderAction === "status") {
       await handleUpdateSelectedOrder();
-    } else if (pendingOrderAction === "delete") {
+    }
+
+    if (pendingOrderAction === "delete") {
       await handleDeleteSelectedOrder();
     }
   };
 
-  // Loading state
+  // =========================================================
+  // LOADING
+  // =========================================================
+
   if (loading) {
     return (
       <main>
@@ -216,87 +462,138 @@ export default function OrdersPage() {
     );
   }
 
-  // Error state
+  // =========================================================
+  // ERROR
+  // =========================================================
+
   if (error) {
     return (
       <main className="min-h-screen bg-app-bg p-6 text-app-text">
-        <p className="text-red-500">{error}</p>
+        <div className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-6">
+          <h2 className="text-lg font-semibold text-red-400">
+            Something went wrong
+          </h2>
+
+          <p className="mt-2 text-sm text-red-300">
+            {error}
+          </p>
+
+          <Button
+            className="mt-4"
+            onClick={() => {
+              setError("");
+              void loadPageData();
+            }}
+          >
+            Try again
+          </Button>
+        </div>
       </main>
     );
   }
 
+  // =========================================================
+  // PAGE
+  // =========================================================
+
   return (
     <main className="page-enter min-w-0 bg-app-bg p-4 text-app-text sm:p-6 lg:p-8">
-      {/* ================= HEADER ================= */}
-      <h1 className="mb-2 text-2xl font-bold sm:text-3xl">
-        Orders
-      </h1>
 
-      <h3 className="mb-6 text-base text-grey-surface sm:text-xl">
-        View and manage orders
-      </h3>
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-      {/* ================= BUTTON ================= */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold sm:text-3xl">
+          Orders
+        </h1>
+
+        <p className="mt-1 text-base text-grey-surface sm:text-xl">
+          View and manage orders
+        </p>
+      </div>
+
+      {/* =====================================================
+          CREATE ORDER BUTTON
+      ===================================================== */}
+
       <div className="mb-6 flex items-center">
-        <Button onClick={() => setIsOrderModalOpen(true)} size="lg">
+        <Button
+          onClick={() => {
+            setIsOrderModalOpen(true);
+            setError("");
+          }}
+          size="lg"
+        >
           Create order
         </Button>
       </div>
 
-      {/* ================= STATS ================= */}
+      {/* =====================================================
+          STATS
+      ===================================================== */}
+
       <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
-        {/* Customers */}
+        {/* CUSTOMERS */}
+
         <Card className="p-6">
           <p className="text-sm text-grey-surface">
             Customers
           </p>
 
           <h2 className="mt-2 text-3xl font-bold">
-            {stats.customers}
+            {stats.customers.toLocaleString()}
           </h2>
         </Card>
 
-        {/* Orders */}
+        {/* ORDERS */}
+
         <Card className="p-6">
           <p className="text-sm text-grey-surface">
             Orders
           </p>
 
           <h2 className="mt-2 text-3xl font-bold">
-            {stats.orders}
+            {stats.orders.toLocaleString()}
           </h2>
         </Card>
 
-        {/* Categories */}
+        {/* CATEGORIES */}
+
         <Card className="p-6">
           <p className="text-sm text-grey-surface">
             Categories
           </p>
 
           <h2 className="mt-2 text-3xl font-bold">
-            {stats.categories}
+            {stats.categories.toLocaleString()}
           </h2>
         </Card>
 
-        {/* Income */}
+        {/* INCOME */}
+
         <Card className="p-6">
           <p className="text-sm text-grey-surface">
             Income
           </p>
 
           <h2 className="mt-2 text-3xl font-bold">
-            ₦{stats.income?.toLocaleString() ?? "0"}
+            ₦{Number(stats.income || 0).toLocaleString()}
           </h2>
         </Card>
       </div>
 
-      {/* ================= ORDERS TABLE ================= */}
+      {/* =====================================================
+          ORDER FILTER
+      ===================================================== */}
+
       <div className="table-enter mt-8">
 
-        {/* ===== FILTER PILLS (MOVED ABOVE TABLE) ===== */}
         <div className="mb-4 flex flex-wrap gap-2">
-          {(["all", "pending", "ready"] as OrderFilter[]).map((filter) => (
+          {(
+            ["all", "pending", "completed"] as OrderFilter[]
+          ).map((filter) => (
             <button
               key={filter}
               type="button"
@@ -312,53 +609,53 @@ export default function OrdersPage() {
           ))}
         </div>
 
-        {/* ===== TABLE CONTAINER ===== */}
+        {/* ===================================================
+            ORDERS TABLE
+        =================================================== */}
+
         <Card className="min-w-0 overflow-hidden p-0">
 
           <div className="overflow-x-auto">
+
             <table className="min-w-[48rem] w-full text-left text-sm">
 
-              {/* ================= TABLE HEADER ================= */}
-
               <thead className="border-b border-card-border bg-app-bg">
-                <tr>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                <tr>
+                  <th className="px-6 py-4 font-semibold">
                     Order
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Customer
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Phone
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Items
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Total
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Status
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Date
                   </th>
 
-                  <th className="px-6 py-4 text-sm font-semibold text-app-text">
+                  <th className="px-6 py-4 font-semibold">
                     Actions
                   </th>
-
                 </tr>
-              </thead>
 
-              {/* ================= TABLE BODY ================= */}
+              </thead>
 
               <tbody className="divide-y divide-card-border">
 
@@ -372,154 +669,206 @@ export default function OrdersPage() {
                     </td>
                   </tr>
                 ) : (
-                  visibleOrders.map((order) => (
+                  visibleOrders.map((order) => {
 
-                    <tr
-                      key={order.id}
-                      className="border-b border-card-border transition hover:bg-grey-light dark:hover:bg-grey-dark"
-                    >
+                    const total =
+                      Number(order.totalAmount) ||
+                      order.items.reduce(
+                        (sum, orderItem) =>
+                          sum +
+                          Number(orderItem.price) *
+                            Number(orderItem.quantity),
+                        0
+                      );
 
-                      {/* Order ID */}
-                      <td className="px-6 py-5">
-                        <span className="font-semibold text-app-text">
-                          #{order.id}
-                        </span>
-                      </td>
+                    const status = getOrderStatus(order.status);
 
-                      {/* Customer */}
-                      <td className="px-6 py-5">
-                        <span className="font-medium text-app-text">
-                          {order.customer.username}
-                        </span>
-                      </td>
+                    return (
+                      <tr
+                        key={order.id}
+                        className="border-b border-card-border transition hover:bg-grey-light dark:hover:bg-grey-dark"
+                      >
 
-                      {/* Phone */}
-                      <td className="px-6 py-5 text-grey-surface">
-                        {order.customer.phonenumber}
-                      </td>
+                        {/* ORDER ID */}
 
-                      {/* Items */}
-                      <td className="px-6 py-5">
+                        <td className="px-6 py-5">
+                          <span className="font-semibold">
+                            #{order.id}
+                          </span>
+                        </td>
 
-                        <div className="space-y-1">
+                        {/* CUSTOMER */}
 
-                          {order.items.map((orderItem) => (
-                            <div
-                              key={orderItem.id}
-                              className="text-sm"
-                            >
-                              <span className="text-app-text">
-                                {orderItem.item.name}
-                              </span>
+                        <td className="px-6 py-5">
+                          <span className="font-medium">
+                            {order.customer?.username ?? "Unknown"}
+                          </span>
+                        </td>
 
-                              <span className="ml-2 text-grey-surface">
-                                × {orderItem.quantity}
-                              </span>
-                            </div>
-                          ))}
+                        {/* PHONE */}
 
-                        </div>
+                        <td className="px-6 py-5 text-grey-surface">
+                          {order.customer?.phonenumber ?? "-"}
+                        </td>
 
-                      </td>
+                        {/* ITEMS */}
 
-                      {/* Total */}
-                      <td className="px-6 py-5">
-                        <span className="font-semibold text-green-400">
-                          ₦{(
-                            order.totalAmount ??
-                            order.items.reduce(
-                              (total, orderItem) =>
-                                total + orderItem.price * orderItem.quantity,
-                              0
-                            )
-                          ).toLocaleString()}
-                        </span>
-                      </td>
+                        <td className="px-6 py-5">
 
-                      {/* Status */}
-                      <td className="px-6 py-5">
+                          <div className="space-y-1">
 
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            order.status.toLowerCase() === "pending"
-                              ? "bg-yellow-500/10 text-yellow-400"
-                              : order.status.toLowerCase() === "ready" || order.status.toLowerCase() === "completed"
-                              ? "bg-green-500/10 text-green-400"
-                              : "bg-gray-500/10 text-gray-400"
-                          }`}
-                        >
-                          {order.status}
-                        </span>
+                            {order.items?.map((orderItem) => (
+                              <div
+                                key={orderItem.id}
+                                className="text-sm"
+                              >
+                                <span>
+                                  {orderItem.item?.name ?? "Item"}
+                                </span>
 
-                      </td>
+                                <span className="ml-2 text-grey-surface">
+                                  × {orderItem.quantity}
+                                </span>
+                              </div>
+                            ))}
 
-                      {/* Date */}
-                      <td className="px-6 py-5 text-sm text-grey-surface">
-                        {new Date(
-                          order.createdAt
-                        ).toLocaleDateString()}
-                      </td>
+                          </div>
 
-                      <td className="px-6 py-5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setOrderStatus(order.status === "ready" ? "ready" : "pending");
-                            setPendingOrderAction(null);
-                          }}
-                          className="rounded-lg p-2 text-grey-surface hover:bg-grey-light hover:text-app-text dark:hover:bg-grey-dark"
-                          aria-label={`Open actions for order ${order.id}`}
-                        >
-                          <MoreVertical className="h-5 w-5" />
-                        </button>
-                      </td>
+                        </td>
 
-                    </tr>
+                        {/* TOTAL */}
 
-                  ))
+                        <td className="px-6 py-5">
+
+                          <span className="font-semibold text-green-400">
+                            ₦{total.toLocaleString()}
+                          </span>
+
+                        </td>
+
+                        {/* STATUS */}
+
+                        <td className="px-6 py-5">
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${
+                              status === "pending"
+                                ? "bg-yellow-500/10 text-yellow-400"
+                                : status === "completed"
+                                ? "bg-green-500/10 text-green-400"
+                                : "bg-gray-500/10 text-gray-400"
+                            }`}
+                          >
+                            {status}
+                          </span>
+
+                        </td>
+
+                        {/* DATE */}
+
+                        <td className="px-6 py-5 text-sm text-grey-surface">
+                          {order.createdAt
+                            ? new Date(
+                                order.createdAt
+                              ).toLocaleDateString()
+                            : "-"}
+                        </td>
+
+                        {/* ACTIONS */}
+
+                        <td className="px-6 py-5">
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setOrderStatus(status);
+                              setPendingOrderAction(null);
+                            }}
+                            className="rounded-lg p-2 text-grey-surface hover:bg-grey-light hover:text-app-text dark:hover:bg-grey-dark"
+                            aria-label={`Open actions for order ${order.id}`}
+                          >
+                            <MoreVertical className="h-5 w-5" />
+                          </button>
+
+                        </td>
+
+                      </tr>
+                    );
+                  })
                 )}
 
               </tbody>
 
             </table>
+
           </div>
+
         </Card>
       </div>
 
-      {/* ================= ORDER ACTIONS MODAL ================= */}
+      {/* =====================================================
+          ORDER ACTIONS MODAL
+      ===================================================== */}
+
       <Modal
         isOpen={selectedOrder !== null}
-        onClose={() => setSelectedOrder(null)}
+        onClose={() => {
+          if (!orderActionLoading) {
+            setSelectedOrder(null);
+            setPendingOrderAction(null);
+          }
+        }}
       >
+
         {selectedOrder && (
+
           <div className="space-y-6">
+
             <div className="border-b border-card-border pb-4">
+
               <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">
                 Order actions
               </p>
+
               <h2 className="mt-2 text-2xl font-semibold">
                 Order #{selectedOrder.id}
               </h2>
+
               <p className="mt-1 text-sm text-grey-surface">
-                Current status: {selectedOrder.status}
+                Current status:{" "}
+                {getOrderStatus(selectedOrder.status)}
               </p>
+
             </div>
 
+            {/* STATUS */}
+
             <label className="block text-sm font-medium">
+
               Order status
+
               <select
                 value={orderStatus}
                 onChange={(event) => {
                   setOrderStatus(event.target.value);
                   setPendingOrderAction("status");
                 }}
+                disabled={orderActionLoading}
                 className="mt-2 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none focus:border-brand-primary"
               >
-                <option value="ready">Ready</option>
-                <option value="pending">Pending</option>
+                <option value="completed">
+                  Completed
+                </option>
+
+                <option value="pending">
+                  Pending
+                </option>
               </select>
+
             </label>
+
+            {/* DELETE */}
 
             <Button
               type="button"
@@ -531,56 +880,97 @@ export default function OrdersPage() {
               Delete order
             </Button>
 
+            {/* CONFIRMATION */}
+
             {pendingOrderAction && (
+
               <div className="rounded-xl border border-brand-primary/30 bg-brand-light/10 p-4">
+
                 <p className="text-sm text-app-text">
+
                   {pendingOrderAction === "delete"
                     ? "Delete this order?"
                     : `Change order status to ${orderStatus}?`}
+
                 </p>
+
                 <div className="mt-4 flex justify-end gap-3">
+
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setPendingOrderAction(null)}
+                    onClick={() =>
+                      setPendingOrderAction(null)
+                    }
                     disabled={orderActionLoading}
                   >
                     Cancel
                   </Button>
+
                   <Button
                     type="button"
-                    onClick={handleOrderActionConfirmation}
+                    onClick={
+                      handleOrderActionConfirmation
+                    }
                     disabled={orderActionLoading}
                   >
-                    {orderActionLoading ? "Working..." : "OK"}
+                    {orderActionLoading
+                      ? "Working..."
+                      : "OK"}
                   </Button>
+
                 </div>
+
               </div>
             )}
+
           </div>
         )}
+
       </Modal>
 
-      {/* ================= CREATE ORDER MODAL ================= */}
+      {/* =====================================================
+          CREATE ORDER MODAL
+      ===================================================== */}
+
       <Modal
         isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
+        onClose={() => {
+          if (!orderSubmitting) {
+            setIsOrderModalOpen(false);
+          }
+        }}
       >
-        <form onSubmit={handleCreateOrder} className="space-y-4">
+
+        <form
+          onSubmit={handleCreateOrder}
+          className="space-y-4"
+        >
+
           <div>
-            <h2 className="text-xl font-semibold">Create order</h2>
+
+            <h2 className="text-xl font-semibold">
+              Create order
+            </h2>
+
             <p className="mt-1 text-sm text-grey-surface">
               Choose a customer, laundry item, and quantity.
             </p>
+
           </div>
 
+          {/* CUSTOMER */}
+
           <label className="block text-sm font-medium">
+
             Customer
+
             <input
               required
               value={customerSearch}
               onChange={(event) => {
                 setCustomerSearch(event.target.value);
+
                 setOrderForm((currentForm) => ({
                   ...currentForm,
                   customerId: "",
@@ -589,32 +979,56 @@ export default function OrdersPage() {
               placeholder="Search by username or phone number"
               className="mt-1 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none placeholder:text-grey-surface focus:border-brand-primary"
             />
+
             <select
               required
               value={orderForm.customerId}
               onChange={(event) => {
+
                 const customer = customers.find(
-                  (item) => item.id === Number(event.target.value)
+                  (item) =>
+                    item.id ===
+                    Number(event.target.value)
                 );
+
                 setOrderForm((currentForm) => ({
                   ...currentForm,
                   customerId: event.target.value,
                 }));
-                setCustomerSearch(customer?.username ?? "");
+
+                setCustomerSearch(
+                  customer?.username ?? ""
+                );
               }}
               className="mt-2 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none focus:border-brand-primary"
             >
-              <option value="">Select customer</option>
+
+              <option value="">
+                Select customer
+              </option>
+
               {filteredCustomers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.username} - {customer.phonenumber}
+
+                <option
+                  key={customer.id}
+                  value={customer.id}
+                >
+                  {customer.username} -{" "}
+                  {customer.phonenumber}
                 </option>
+
               ))}
+
             </select>
+
           </label>
 
+          {/* ITEM */}
+
           <label className="block text-sm font-medium">
+
             Item
+
             <select
               required
               value={orderForm.itemId}
@@ -626,62 +1040,127 @@ export default function OrdersPage() {
               }
               className="mt-1 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none focus:border-brand-primary"
             >
-              <option value="">Select item</option>
+
+              <option value="">
+                Select item
+              </option>
+
               {categoryItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.categoryName} - {item.name} (₦{item.price.toLocaleString()})
+
+                <option
+                  key={item.id}
+                  value={item.id}
+                >
+                  {item.categoryName} -{" "}
+                  {item.name} (₦
+                  {Number(item.price).toLocaleString()})
                 </option>
+
               ))}
+
             </select>
+
           </label>
 
+          {/* ORDER TOTAL */}
+
           {selectedOrderItem && (
+
             <div className="rounded-lg border border-card-border bg-app-bg p-3 text-sm">
+
               <div className="flex justify-between text-grey-surface">
-                <span>Order total</span>
+
+                <span>
+                  Order total
+                </span>
+
                 <span className="font-semibold text-app-text">
                   ₦{orderTotal.toLocaleString()}
                 </span>
+
               </div>
+
+              {/* INSUFFICIENT BALANCE */}
+
               {hasInsufficientBalance && (
+
                 <p className="mt-2 text-red-400">
-                  This order exceeds the customer&apos;s balance of ₦
-                  {selectedOrderCustomer?.balance.toLocaleString()}. Add balance before creating it.
+                  This order exceeds the
+                  customer&apos;s balance of ₦
+                  {Number(
+                    selectedOrderCustomer?.balance ?? 0
+                  ).toLocaleString()}
+                  . Add balance before creating it.
                 </p>
+
               )}
+
             </div>
+
           )}
 
+          {/* QUANTITY */}
+
           <label className="block text-sm font-medium">
+
             Quantity
+
             <input
               required
               min="1"
               type="number"
               value={orderForm.quantity}
-              onChange={(event) =>
+              onChange={(event) => {
+
+                const quantity =
+                  Number(event.target.value);
+
                 setOrderForm((currentForm) => ({
                   ...currentForm,
-                  quantity: Math.max(1, Number(event.target.value)),
-                }))
-              }
+                  quantity:
+                    Number.isFinite(quantity) &&
+                    quantity > 0
+                      ? quantity
+                      : 1,
+                }));
+
+              }}
               className="mt-1 w-full rounded-lg border border-card-border bg-app-bg px-3 py-2 text-app-text outline-none focus:border-brand-primary"
             />
+
           </label>
 
+          {/* BUTTONS */}
+
           <div className="flex justify-end gap-3 pt-2">
+
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsOrderModalOpen(false)}
+              onClick={() =>
+                setIsOrderModalOpen(false)
+              }
+              disabled={orderSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={orderSubmitting || hasInsufficientBalance}>
-              {orderSubmitting ? "Creating..." : "Create order"}
+
+            <Button
+              type="submit"
+              disabled={
+                orderSubmitting ||
+                hasInsufficientBalance
+              }
+            >
+              {orderSubmitting
+                ? "Creating..."
+                : "Create order"}
             </Button>
+
           </div>
+
         </form>
+
       </Modal>
 
     </main>

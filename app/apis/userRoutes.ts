@@ -33,22 +33,22 @@ export type StatsDataResponse = {
 };
 
 export async function getStats(
-    token: string
+  token: string
 ): Promise<StatsDataResponse> {
-    const response = await fetch(`${url}/apiv1/count`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-        },
-    });
-    const data = await response.json();
+  const response = await fetch(`${url}/apiv1/count`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await response.json();
 
-    if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch");
-    }
-    console.log(data);
-    return data;
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch");
+  }
+  console.log(data);
+  return data;
 }
 
 
@@ -61,7 +61,40 @@ export type Customer = {
   createdAt: string;
   updatedAt: string;
   order: Order[];
+  orderCount?: number;
 };
+
+type ApiCustomer = Omit<Customer, "order"> & {
+  order?: Order[] | number;
+  orders?: Order[] | number;
+  orderCount?: number;
+  ordersCount?: number;
+  _count?: {
+    order?: number;
+    orders?: number;
+  };
+};
+
+function normalizeCustomer(customer: ApiCustomer): Customer {
+  const order = Array.isArray(customer.order)
+    ? customer.order
+    : Array.isArray(customer.orders)
+      ? customer.orders
+      : [];
+  const orderCount =
+    customer.orderCount ??
+    customer.ordersCount ??
+    customer._count?.order ??
+    customer._count?.orders ??
+    (typeof customer.order === "number" ? customer.order : undefined) ??
+    (typeof customer.orders === "number" ? customer.orders : order.length);
+
+  return {
+    ...customer,
+    order,
+    orderCount,
+  };
+}
 
 // API response type
 export type CustomersResponse = {
@@ -90,7 +123,10 @@ export async function getCustomers(
     );
   }
 
-  return data;
+  return {
+    ...data,
+    getCustomer: data.getCustomer.map(normalizeCustomer),
+  };
 }
 
 export type CustomerResponse = {
@@ -121,7 +157,10 @@ export async function getCustomer(
     throw new Error(data.message || "Failed to get customer");
   }
 
-  return data;
+  return {
+    ...data,
+    customer: normalizeCustomer(data.customer),
+  };
 }
 
 export type UpdateCustomerData = {
