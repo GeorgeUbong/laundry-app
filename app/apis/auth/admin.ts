@@ -1,4 +1,4 @@
-//admin functs 
+// adminRoutes.ts
 const url = process.env.NEXT_PUBLIC_API_URL;
 
 export interface LoginData {
@@ -8,10 +8,10 @@ export interface LoginData {
 
 export interface LoginResponse {
     message: string;
-    token: string;
+    ADMIN_TOKEN: string;  // ✅ Keep consistent naming
 }
 
-export async function loginAdmin (
+export async function loginAdmin(
     email: string,
     password: string
 ): Promise<LoginResponse> {
@@ -20,9 +20,7 @@ export async function loginAdmin (
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-            email, password
-        }),
+        body: JSON.stringify({ email, password }),
     });
 
     const data = await response.json();
@@ -31,8 +29,10 @@ export async function loginAdmin (
         throw new Error(data.message || "Login failed");
     }
 
-    //Save JWT token
-    localStorage.setItem("token", data.token);
+    // ✅ Save with consistent naming
+     sessionStorage.setItem("token2", data.ADMIN_TOKEN);
+    localStorage.setItem("token2", data.ADMIN_TOKEN);  // Changed from data.token2
+    localStorage.setItem("admin", JSON.stringify(data.admin));
 
     return data;
 }
