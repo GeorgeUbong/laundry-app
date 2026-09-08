@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { loginEmployee } from './apis/auth/user';
 import { Button } from './_components/button';
 import { Card, CardContent, CardHeader, CardTitle } from './_components/card';
+import bgImage from '../public/start.png';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +32,10 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="page-enter min-h-screen w-full flex items-center justify-center p-4 bg-app-bg text-app-text">
+    <main
+      className="page-enter min-h-screen w-full flex items-center justify-center p-4 bg-app-bg text-app-text bg-cover bg-center"
+      style={{ backgroundImage: `linear-gradient(rgb(0 0 0 / 0.35), rgb(0 0 0 / 0.35)), url(${bgImage.src})` }}
+    >
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
