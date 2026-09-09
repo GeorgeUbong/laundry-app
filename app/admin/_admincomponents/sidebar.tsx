@@ -9,17 +9,17 @@ import { toast } from "react-toastify";
 const navigation = [
   {
     name: "Overview",
-    href: "/dashboard",
+    href: "/admin/dashboard",
     icon: <Summary/>,
   },
   {
     name: "Items",
-    href: "/item",
+    href: "/admin/item",
     icon: <UsersRound/>,
   },
   {
     name: "Categories",
-    href: "/adminCategory",
+    href: "/admin/category",
     icon: <SquareStack/>,
   },
   {
@@ -29,7 +29,7 @@ const navigation = [
   },
   {
     name: "Customers",
-    href: "/adminCustomers",
+    href: "/admin/customer",
     icon: <UsersRound/>,
   },
 ];
