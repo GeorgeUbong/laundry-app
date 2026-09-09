@@ -315,7 +315,90 @@ export async function updateItem(
     );
   }
 
-  // Adjust this if your backend uses a different
-  // response property.
+ 
   return data.updateItem;
+}
+
+
+//---ORDERS PAGE
+export type OrderItem = {
+  id: number;
+  orderId: number;
+  itemId: number;
+  quantity: number;
+  price: number;
+  item: {
+    id: number;
+    name: string;
+    price: number;
+  };
+};
+
+export type Order = {
+  id: number;
+  customerId: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  completed: boolean;
+  completedAt: string | null;
+  totalAmount: number | null;
+  items: OrderItem[];
+  customer: {
+    id: number;
+    username: string;
+    phonenumber: string;
+    balance: number;
+  };
+};
+
+export async function getRecentOrders(
+  token2: string
+): Promise<Order[]> {
+  const response = await fetch(
+    `${url}/apiv1/admin/orders/recent`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token2}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to get orders");
+  }
+
+  return data.orders;
+}
+
+
+//--Customer page
+// Add this to your adminRoutes.ts or userRoutes.ts
+
+export type ReversePaymentResponse = {
+  message: string;
+  order: Order;
+  updatedCustomer: Omit<Customer, "order">;
+};
+
+export async function reversePayment(
+  orderId: number,
+  token2: string
+): Promise<ReversePaymentResponse> {
+  const response = await fetch(`${url}/apiv1/admin/orders/${orderId}/reverse-payment`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token2}`,
+    },
+  });
+ const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to get orders");
+  }
+  return data;
 }

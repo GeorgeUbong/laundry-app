@@ -24,7 +24,7 @@ const navigation = [
   },
   {
     name: "Orders",
-    href: "/orders",
+    href: "/admin/orders",
     icon: <ShoppingBag/>,
   },
   {
