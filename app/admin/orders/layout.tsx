@@ -1,5 +1,5 @@
 import SidebarAdmin from "../_admincomponents/sidebar";
-import Sidebar from "../_admincomponents/sidebar";
+import { AuthGuard } from "../../_components/AuthGuard";
 
 export default function Orders({
   children,
@@ -8,11 +8,13 @@ export default function Orders({
 }) {
   return (
     <div className="min-h-screen bg-black">
-      <SidebarAdmin />
+      <AuthGuard appType="admin" loginPath="/admin">
+        <SidebarAdmin />
 
-      <main className="min-h-screen pt-16 md:ml-64 md:pt-0">
-        {children}
-      </main>
+        <main className="min-h-screen pt-16 md:ml-64 md:pt-0">
+          {children}
+        </main>
+      </AuthGuard>
     </div>
   );
 }

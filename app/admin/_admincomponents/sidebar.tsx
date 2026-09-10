@@ -49,7 +49,9 @@ export default function SidebarAdmin() {
   }, [pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("token2");
+    localStorage.removeItem("admin");
+    sessionStorage.removeItem("token2");
     toast.success("Logged out successfully!");
     window.location.href = "/admin";
   };
