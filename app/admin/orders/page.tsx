@@ -74,6 +74,16 @@ export default function OrdersPage() {
     loadPageData();
   }, []);
 
+  const getOrderTotal = (order: Order) =>
+    Number(
+      order.totalAmount ??
+        order.items.reduce(
+          (sum, item) =>
+            sum + Number(item.price || 0) * Number(item.quantity || 0),
+          0
+        )
+    );
+
   const handleReversePayment = async () => {
     if (!selectedOrder) return;
 
@@ -105,8 +115,7 @@ export default function OrdersPage() {
       setStats((currentStats) => ({
         ...currentStats,
         income:
-          currentStats.income -
-          (selectedOrder.totalAmount ?? 0),
+          currentStats.income - getOrderTotal(selectedOrder),
       }));
 
       setSelectedOrder(null);
@@ -279,10 +288,7 @@ export default function OrdersPage() {
 
                     {/* Total */}
                     <td className="px-6 py-4 font-medium">
-                      ₦
-                      {(
-                        order.totalAmount ?? 0
-                      ).toLocaleString()}
+                      ₦{getOrderTotal(order).toLocaleString()}
                     </td>
 
                     {/* Date */}
@@ -363,10 +369,7 @@ export default function OrdersPage() {
               </span>
 
               <span className="font-medium">
-                ₦
-                {(
-                  selectedOrder.totalAmount ?? 0
-                ).toLocaleString()}
+                ₦{getOrderTotal(selectedOrder).toLocaleString()}
               </span>
             </div>
 

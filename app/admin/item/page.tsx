@@ -22,6 +22,8 @@ import {
   type Category,
 } from "@/apis/adminRoutes";
 
+import Loading from "./loading";
+
 type DashboardStats = {
   categories: number;
   customers: number;
@@ -397,6 +399,10 @@ export default function ItemsPage() {
   // PAGE
   // =========================================================
 
+  if (loading) {
+    return <Loading />;
+  }
+
   return (
     <main className="page-enter min-h-screen bg-black p-4 text-white sm:p-6">
 
@@ -527,22 +533,9 @@ export default function ItemsPage() {
 
             <tbody>
 
-              {/* LOADING */}
-
-              {loading && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-5 py-10 text-center text-gray-400"
-                  >
-                    Loading items...
-                  </td>
-                </tr>
-              )}
-
               {/* EMPTY */}
 
-              {!loading && items.length === 0 && (
+              {items.length === 0 && (
                 <tr>
                   <td
                     colSpan={6}

@@ -740,7 +740,7 @@ export default function OrdersPage() {
 
                         <td className="px-6 py-5">
 
-                          <span className="font-semibold text-green-400">
+                          <span className="font-semibold text-brand-primary">
                             ₦{total.toLocaleString()}
                           </span>
 
@@ -753,10 +753,10 @@ export default function OrdersPage() {
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-medium ${
                               status === "pending"
-                                ? "bg-yellow-500/10 text-yellow-400"
+                                ? "bg-brand-light text-brand-primary"
                                 : status === "completed"
-                                ? "bg-green-500/10 text-green-400"
-                                : "bg-gray-500/10 text-gray-400"
+                                ? "bg-grey-light text-grey-dark dark:bg-grey-dark dark:text-white"
+                                : "bg-grey-light text-grey-surface"
                             }`}
                           >
                             {status}

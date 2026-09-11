@@ -56,7 +56,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Header */}
-      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center border-b border-gray-800 bg-gray-950 text-white md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center border-b border-card-border bg-card-bg text-app-text md:hidden">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="flex items-center justify-center px-4 py-3"
@@ -69,7 +69,7 @@ export default function Sidebar() {
           )}
         </button>
         <h1 className="text-xl font-bold">
-          Laundry<span className="text-green-500">App</span>
+          Laundry<span className="text-brand-primary">App</span>
         </h1>
       </div>
 
@@ -83,14 +83,14 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-gray-800 bg-gray-950 text-white transition-transform duration-300 md:z-50 md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-card-border bg-card-bg text-app-text transition-transform duration-300 md:z-50 md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Logo - Desktop Only */}
-        <div className="hidden h-20 items-center border-b border-gray-800 px-6 md:flex">
+        <div className="hidden h-20 items-center border-b border-card-border px-6 md:flex">
           <h1 className="text-2xl font-bold">
-            Laundry<span className="text-green-500">App</span>
+            Laundry<span className="text-brand-primary">App</span>
           </h1>
         </div>
 
@@ -112,8 +112,8 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-4 rounded-lg px-4 py-3 text-sm font-medium transition ${
                     isActive
-                      ? "bg-green-600 text-white"
-                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                      ? "bg-brand-primary text-white"
+                      : "text-grey-surface hover:bg-grey-light hover:text-app-text dark:hover:bg-grey-dark"
                   }`}
                 >
                   <span className="text-lg">{item.icon}</span>
@@ -125,9 +125,9 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom - Logout */}
-        <div className="border-t border-gray-800 p-4">
+        <div className="border-t border-card-border p-4">
           <button
-            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm text-gray-400 transition hover:bg-gray-900 hover:text-white"
+            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm text-grey-surface transition hover:bg-grey-light hover:text-app-text dark:hover:bg-grey-dark"
             onClick={handleLogout}
           >
             <span className="text-lg">↪</span>
