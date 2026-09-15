@@ -1,24 +1,20 @@
-import EmployeeSidebar from "../_components/sidebar";
+import Sidebar from "../_components/sidebar";
+import { AuthGuard } from "../_components/AuthGuard";
 
-export default function Order({
+export default function OrdersPage({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
+      <AuthGuard appType="user" loginPath="/">
+        <Sidebar />
 
-      <EmployeeSidebar />
-
-      <div className="lg:ml-72">
-
-        {/* Space for mobile header */}
-        <div className="pt-16 lg:pt-0">
+        <main className="min-h-screen pt-16 md:ml-64 md:pt-0">
           {children}
-        </div>
-
-      </div>
-
+        </main>
+      </AuthGuard>
     </div>
   );
 }

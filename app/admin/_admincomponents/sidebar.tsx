@@ -5,32 +5,36 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, ShoppingBag, SquareStack, Summary, UsersRound, X,   } from "lucide-react";
 import { toast } from "react-toastify";
-import { UserRound } from "lucide-react";
 
 const navigation = [
   {
     name: "Overview",
-    href: "/dashboard",
+    href: "/admin/dashboard",
     icon: <Summary/>,
   },
   {
-    name: "Customers",
-    href: "/customer",
+    name: "Items",
+    href: "/admin/item",
     icon: <UsersRound/>,
   },
   {
     name: "Categories",
-    href: "/category",
+    href: "/admin/category",
     icon: <SquareStack/>,
   },
   {
     name: "Orders",
-    href: "/orders",
+    href: "/admin/orders",
     icon: <ShoppingBag/>,
+  },
+  {
+    name: "Customers",
+    href: "/admin/customer",
+    icon: <UsersRound/>,
   },
 ];
 
-export default function Sidebar() {
+export default function SidebarAdmin() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,10 +49,11 @@ export default function Sidebar() {
   }, [pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("token2");
+    localStorage.removeItem("admin");
+    sessionStorage.removeItem("token2");
     toast.success("Logged out successfully!");
-    window.location.href = "/";
+    window.location.href = "/admin";
   };
 
   if (!mounted) return null;
@@ -56,7 +61,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Header */}
-      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center border-b border-card-border bg-card-bg text-app-text md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center border-b border-gray-800 bg-gray-950 text-white md:hidden">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="flex items-center justify-center px-4 py-3"
@@ -69,7 +74,7 @@ export default function Sidebar() {
           )}
         </button>
         <h1 className="text-xl font-bold">
-          Laundry<span className="text-brand-primary">App</span>
+          Laundry<span className="text-green-500">App</span>
         </h1>
       </div>
 
@@ -83,14 +88,14 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-card-border bg-card-bg text-app-text transition-transform duration-300 md:z-50 md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-gray-800 bg-gray-950 text-white transition-transform duration-300 md:z-50 md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Logo - Desktop Only */}
-        <div className="hidden h-20 items-center border-b border-card-border px-6 md:flex">
+        <div className="hidden h-20 items-center border-b border-gray-800 px-6 md:flex">
           <h1 className="text-2xl font-bold">
-            Laundry<span className="text-brand-primary">App</span>
+            Laundry<span className="text-green-500">App</span>
           </h1>
         </div>
 
@@ -112,8 +117,8 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-4 rounded-lg px-4 py-3 text-sm font-medium transition ${
                     isActive
-                      ? "bg-brand-primary text-white"
-                      : "text-grey-surface hover:bg-grey-light hover:text-app-text dark:hover:bg-grey-dark"
+                      ? "bg-green-600 text-white"
+                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
                   }`}
                 >
                   <span className="text-lg">{item.icon}</span>
@@ -125,9 +130,9 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom - Logout */}
-        <div className="border-t border-card-border p-4">
+        <div className="border-t border-gray-800 p-4">
           <button
-            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm text-grey-surface transition hover:bg-grey-light hover:text-app-text dark:hover:bg-grey-dark"
+            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm text-gray-400 transition hover:bg-gray-900 hover:text-white"
             onClick={handleLogout}
           >
             <span className="text-lg">↪</span>

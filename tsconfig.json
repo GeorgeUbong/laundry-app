@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./app/*"],
+      "react": [ "./node_modules/@types/react" ]
     }
   },
   "include": [

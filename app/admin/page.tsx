@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { loginEmployee } from './apis/auth/user';
-import { Button } from './_components/button';
-import { Card, CardContent, CardHeader, CardTitle } from './_components/card';
-import bgImage from '../public/start.png';
+import { Button } from '../_components/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../_components/card';
+import bgImage from '../../public/start.png';
+import { loginAdmin } from '@/apis/auth/admin';
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,10 +19,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await loginEmployee(email, password);
+      await loginAdmin(email, password);
       // Success login
       toast.success('Login successful! Redirecting...');
-      router.push('/dashboard');
+      router.push('/admin/dashboard');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       toast.error(errorMessage);
@@ -38,9 +38,9 @@ export default function LoginPage() {
     >
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome Back Admin</CardTitle>
           <p className="text-sm text-grey-surface">
-            Enter your credentials to access your account
+            Enter credentials to access your account
           </p>
         </CardHeader>
         
@@ -79,7 +79,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="adminpassword"
                 className="w-full h-10 px-3 rounded-lg border border-card-border bg-transparent text-sm text-app-text placeholder:text-grey-surface focus:outline-none focus:ring-2 focus:ring-brand-primary transition"
               />
             </div>

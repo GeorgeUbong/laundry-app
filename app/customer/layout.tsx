@@ -1,7 +1,7 @@
 import Sidebar from "../_components/sidebar";
 import { AuthGuard } from "../_components/AuthGuard";
 
-export default function DashboardLayout({
+export default function CustomerPage({
   children,
 }: {
   children: React.ReactNode;
