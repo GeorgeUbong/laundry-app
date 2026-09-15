@@ -19,7 +19,7 @@ import {
 
 import { Button } from "@/_components/button";
 import { Card } from "@/_components/card";
-import { Modal } from "@/_components/modal";
+import  Modal  from "@/_components/modal";
 import Loading from "./loading";
 
 type DashboardStats = {

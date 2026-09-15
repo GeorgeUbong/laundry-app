@@ -22,7 +22,7 @@ import {
 } from "@/apis/userRoutes";
 
 import { Button } from "@/_components/button";
-import { Modal } from "@/_components/modal";
+import  Modal  from "@/_components/modal";
 import Loading from "./loading";
 
 type DashboardStats = {

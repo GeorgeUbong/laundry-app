@@ -10,7 +10,7 @@ interface ModalProps {
   className?: string;
 }
 
-export function Modal({ isOpen, onClose, children, className }: ModalProps) {
+export default function Modal({ isOpen, onClose, children, className }: ModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();

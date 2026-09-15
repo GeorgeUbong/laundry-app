@@ -11,7 +11,7 @@ import {
   reversePayment,
 } from "@/apis/adminRoutes";
 
-import { Modal } from "@/_components/modal";
+import  Modal  from "@/_components/modal";
 import Loading from "@/loading";
 
 type DashboardStats = {

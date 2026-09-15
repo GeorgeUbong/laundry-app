@@ -469,12 +469,15 @@ export default function CustomersPage() {
         )}
       </div>
 
-      {isAddModalOpen && (
-        <Modal
-          title="Add Customer"
-          onClose={() => setIsAddModalOpen(false)}
-        >
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      >
           <form onSubmit={handleAddCustomer} className="mt-6 space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Add Customer
+            </h2>
+
             <label className="block text-sm font-medium text-gray-700">
               Username
               <input
@@ -542,8 +545,7 @@ export default function CustomersPage() {
               </button>
             </div>
           </form>
-        </Modal>
-      )}
+      </Modal>
 
       {/* Customer Details Modal */}
       {selectedCustomer && (
