@@ -4,9 +4,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* 1. Global CSS Variables for Dynamic Dark/Light Switching */
+/* 1. Global CSS Variables */
 :root {
-  --bg-app: #ffffff;
+  color-scheme: light;
+  --bg-app: #faf9f7;
   --text-main: #09090b;
   --surface-card: #ffffff;
   --border-muted: #e5e7eb;
@@ -44,7 +45,7 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.dark {
+/* .dark {
   --bg-app: #09090b;
   --text-main: #ffffff;
   --surface-card: #18181b;
@@ -82,11 +83,13 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+} */
+
 /* 2. Extending Tailwind CSS Theme */
 @theme {
   /* Brand Colors */
-  --color-brand-primary: #2563eb;
-  --color-brand-hover: #1d4ed8;
+  --color-brand-primary: #266DC9;
+  --color-brand-hover: #80B0EB;
   --color-brand-light: #eff6ff;
 
   /* Grey Palette */

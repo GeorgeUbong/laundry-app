@@ -1,8 +1,8 @@
 export const themeTokens = {
   colors: {
     brand: {
-      primary: '#2563eb',   // Main Blue (Buttons / Active states)
-      hover: '#1d4ed8',     // Darker Blue (Button Hover)
+      primary: '#266DC9',   // Main Blue (Buttons / Active states)
+      hover: '#80B0EB',     // Darker Blue (Button Hover)
       light: '#eff6ff',     // Soft Blue Tint (Badges / Highlights)
     },
     neutral: {
@@ -12,6 +12,7 @@ export const themeTokens = {
     },
     base: {
       white: '#ffffff',
+      offWhite: '#faf9f7',
       black: '#09090b',
     },
   },
