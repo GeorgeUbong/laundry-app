@@ -56,7 +56,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Header */}
-      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center border-b border-card-border bg-card-bg text-app-text md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-16 items-center border-b border-card-border bg-card-bg bg-brand-primary text-app-text md:hidden">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="flex items-center justify-center px-4 py-3"
@@ -83,7 +83,7 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-card-border bg-card-bg text-app-text transition-transform duration-300 md:z-50 md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-card-border  bg-card-bg text-app-text transition-transform duration-300 md:z-50 md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
